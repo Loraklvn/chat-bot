@@ -4,8 +4,10 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 
 export default function Home() {
   async function splitDocument() {
-    const response = await fetch("podcasts.txt");
+    const response = await fetch("/docs/podcasts.txt");
     const text = await response.text();
+
+    // console.log(text);
 
     const splitter = new RecursiveCharacterTextSplitter({
       chunkSize: 150,
@@ -14,7 +16,6 @@ export default function Home() {
     const output = await splitter.createDocuments([text]);
     console.log(output);
   }
-  splitDocument();
 
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
