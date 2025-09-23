@@ -18,7 +18,7 @@ type ChatbotProps = {
   title?: string;
   subtitle?: string;
   placeholder?: string;
-  onSendMessage?: (message: string) => Promise<string>;
+  onSendMessage: (message: string) => Promise<string>;
 };
 
 export function Chatbot({
@@ -61,31 +61,7 @@ export function Chatbot({
 
     try {
       // Get bot response
-      let botResponse =
-        "I'm sorry, I don't have a response for that right now. Please try again!";
-
-      if (onSendMessage) {
-        botResponse = await onSendMessage(content);
-      } else {
-        // Default movie-related responses for demo
-        await new Promise((resolve) =>
-          setTimeout(resolve, 1000 + Math.random() * 2000)
-        );
-
-        if (
-          content.toLowerCase().includes("movie") ||
-          content.toLowerCase().includes("film")
-        ) {
-          botResponse =
-            "That's a great question about movies! I'd love to help you discover something new. What genre are you in the mood for?";
-        } else if (content.toLowerCase().includes("recommend")) {
-          botResponse =
-            "I'd be happy to recommend some movies! What are some of your favorite films or what mood are you in?";
-        } else {
-          botResponse =
-            "Interesting! Tell me more about what kind of movies you enjoy, and I can give you some great recommendations.";
-        }
-      }
+      const botResponse = await onSendMessage(content);
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),

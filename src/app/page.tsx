@@ -1,32 +1,52 @@
 "use client";
 
+import { ChatOpenAI } from "@langchain/openai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+
 import { Chatbot } from "@/components/chatbot";
+
+const model = new ChatOpenAI({
+  model: "gpt-3.5-turbo",
+  apiKey: process.env.NEXT_PUBLIC_OPEN_AI_API_KEY,
+});
+
+const standaloneQuestionPrompt = ChatPromptTemplate.fromMessages([
+  [
+    "system",
+    "Given a question, convert it to a standalone question. question: {input} standalone question:",
+  ],
+  ["human", "{input}"],
+]);
+
+const standaloneQuestionChain = standaloneQuestionPrompt.pipe(model);
+
+const prompt = ChatPromptTemplate.fromMessages([
+  [
+    "system",
+    "You are a helpful assistant that helps the user with their questions about movies.",
+  ],
+  ["human", "{input}"],
+]);
+
+const promptChain = prompt.pipe(model);
 
 export default function Page() {
   // Example of how to handle custom message processing
   const handleMovieMessage = async (message: string): Promise<string> => {
     // Simulate API call delay
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1000 + Math.random() * 2000)
-    );
+    const standaloneQuestionResponse = await standaloneQuestionChain.invoke({
+      input: message,
+    });
 
-    // Simple movie-related responses (you can replace this with actual AI/API calls)
-    const lowerMessage = message.toLowerCase();
+    console.log({ standaloneQuestionResponse });
 
-    if (lowerMessage.includes("action")) {
-      return "Great choice! For action movies, I'd recommend checking out 'Mad Max: Fury Road', 'John Wick', or 'Mission: Impossible' series. What specific type of action are you looking for?";
-    } else if (lowerMessage.includes("comedy")) {
-      return "Comedy is perfect for a good laugh! Some recent favorites include 'Everything Everywhere All at Once', 'The Grand Budapest Hotel', or classic picks like 'Groundhog Day'. What kind of humor do you enjoy?";
-    } else if (lowerMessage.includes("horror")) {
-      return "Horror movies can be thrilling! Are you looking for psychological horror like 'Hereditary', classic scares like 'The Conjuring', or something more recent? What scares you in the best way?";
-    } else if (
-      lowerMessage.includes("recommend") ||
-      lowerMessage.includes("suggest")
-    ) {
-      return "I'd love to recommend something perfect for you! What genres do you usually enjoy, or what's your mood like today? Are you looking for something light and fun, or deep and thought-provoking?";
-    } else {
-      return "That's interesting! I'm here to help you discover amazing movies. Feel free to ask me about specific genres, actors, directors, or just tell me what kind of mood you're in and I'll suggest something great!";
-    }
+    const promptResponse = await promptChain.invoke({
+      input: standaloneQuestionResponse.content as string,
+    });
+
+    console.log({ promptResponse });
+
+    return promptResponse.content as string;
   };
 
   return (
