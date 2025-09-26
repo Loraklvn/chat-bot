@@ -18,13 +18,13 @@ type ChatbotProps = {
   title?: string;
   subtitle?: string;
   placeholder?: string;
-  onSendMessage: (message: string) => Promise<string>;
+  onSendMessage: (message: string, messages: Message[]) => Promise<string>;
 };
 
 export function Chatbot({
-  title = "Movie Assistant",
-  subtitle = "Ask me anything about movies!",
-  placeholder = "What movie would you like to know about?",
+  title = "Scrimba Assistant",
+  subtitle = "Ask me anything about Scrimba!",
+  placeholder = "What would you like to know about Scrimba?",
   onSendMessage,
 }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
@@ -61,7 +61,7 @@ export function Chatbot({
 
     try {
       // Get bot response
-      const botResponse = await onSendMessage(content);
+      const botResponse = await onSendMessage(content, messages);
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),

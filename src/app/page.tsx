@@ -1,52 +1,69 @@
 "use client";
 
 import { ChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
 
 import { Chatbot } from "@/components/chatbot";
+import { answerPrompt, standaloneQuestionPrompt } from "@/utils/prompts";
+import { retriever } from "@/utils/retriever";
+import { Document } from "@langchain/core/documents";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import {
+  RunnablePassthrough,
+  RunnableSequence,
+} from "@langchain/core/runnables";
 
 const model = new ChatOpenAI({
   model: "gpt-3.5-turbo",
   apiKey: process.env.NEXT_PUBLIC_OPEN_AI_API_KEY,
 });
 
-const standaloneQuestionPrompt = ChatPromptTemplate.fromMessages([
-  [
-    "system",
-    "Given a question, convert it to a standalone question. question: {input} standalone question:",
-  ],
-  ["human", "{input}"],
+const standaloneChain = standaloneQuestionPrompt
+  .pipe(model)
+  .pipe(new StringOutputParser());
+
+const retrieverChain = RunnableSequence.from([
+  (prevResult) => prevResult.standalone_question,
+  retriever,
+  (prev) => {
+    return prev.map((match: Document) => match.pageContent).join("\n\n");
+  },
 ]);
 
-const standaloneQuestionChain = standaloneQuestionPrompt.pipe(model);
+const answerChain = answerPrompt.pipe(model).pipe(new StringOutputParser());
 
-const prompt = ChatPromptTemplate.fromMessages([
-  [
-    "system",
-    "You are a helpful assistant that helps the user with their questions about movies.",
-  ],
-  ["human", "{input}"],
+const mainChain = RunnableSequence.from([
+  {
+    standalone_question: standaloneChain,
+    original_input: new RunnablePassthrough(),
+  },
+  {
+    context: retrieverChain,
+    question: ({ original_input }) => original_input.input,
+    conv_history: ({ original_input }) =>
+      original_input.messageHistory
+        .map((message: Message) => `${message.role}: ${message.content}`)
+        .join("\n"),
+  },
+  answerChain,
 ]);
 
-const promptChain = prompt.pipe(model);
-
+type Message = {
+  id: string;
+  content: string;
+  role: "user" | "assistant";
+  timestamp: Date;
+};
 export default function Page() {
-  // Example of how to handle custom message processing
-  const handleMovieMessage = async (message: string): Promise<string> => {
-    // Simulate API call delay
-    const standaloneQuestionResponse = await standaloneQuestionChain.invoke({
+  const handleMovieMessage = async (
+    message: string,
+    messages: Message[]
+  ): Promise<string> => {
+    const response = await mainChain.invoke({
       input: message,
+      messageHistory: messages,
     });
 
-    console.log({ standaloneQuestionResponse });
-
-    const promptResponse = await promptChain.invoke({
-      input: standaloneQuestionResponse.content as string,
-    });
-
-    console.log({ promptResponse });
-
-    return promptResponse.content as string;
+    return response;
   };
 
   return (
@@ -54,7 +71,7 @@ export default function Page() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Movie Chatbot Demo
+            Scrimba Chatbot Demo
           </h1>
           <p className="text-xl text-gray-600">
             Click the chat button in the bottom right to start discovering great
@@ -106,8 +123,8 @@ export default function Page() {
 
       {/* Chatbot Component */}
       <Chatbot
-        title="Movie Assistant"
-        subtitle="Ask me anything about movies!"
+        title="Scrimba Assistant"
+        subtitle="Ask me anything about Scrimba!"
         placeholder="What movie would you like to know about?"
         onSendMessage={handleMovieMessage}
       />
